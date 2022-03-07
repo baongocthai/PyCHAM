@@ -271,7 +271,10 @@ def pp_intro(y, num_comp, Pybel_objects, TEMP, H2Oi,
 				seedx = seedx*(1./sum(seedx)) # ensure the non-water mole fractions sum to one
 				
 				# average molar volume of dry (no water) seed components (cc/mol) for all size bins
-				avMV = (sum(seedx*MV[self.seedi[:], 0]))
+				temporary_variable = MV[seedi[:], 0]
+				temporary_variable = np.expand_dims(temporary_variable, axis=-1) # error due to matrix size
+				avMV = (sum(seedx*temporary_variable))
+				# avMV = (sum(seedx*MV[self.seedi[:], 0]))
 				
 				# total molecular concentration of dry (no water) seed components 
 				# including water (molecules/cm3) per size bin, 
