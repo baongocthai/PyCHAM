@@ -149,6 +149,9 @@ def cham_up(sumt, temp, tempt, Pnow,
 	# condition/nucleation
 	bc_red = 0
 	
+	# Report simulation time step to terminal
+	print('Simulation progress : ' ,sumt, ' s')
+	
 	if ((len(self.light_time)) > 0):
 	
 		# whether lights on (1) or off (0) during this step
