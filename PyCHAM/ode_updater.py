@@ -666,7 +666,7 @@ def ode_updater(update_stp,
 		sumt += tnew # total time through simulation (s)
 		self.sumt += tnew
 		
-		if (any(self.obs_comp_i)): # if any components constrained to observations
+		if (hasattr(self, 'obs_file') and any(self.obs_comp_i)): # if any components constrained to observations
 				# get observed concentrations now
 				for ci in range(len(self.obs_comp_i)): # loop through components
 					y[self.obs_comp_i[ci]] = np.interp(sumt, self.obs[:, 0], self.obs[:, ci+1])
