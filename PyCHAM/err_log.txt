@@ -1,36 +1,4 @@
-C:\Users\Psymo\Desktop\PyCHAM\PyCHAM\PyCHAM/output\mcm_APINENE_CH4_wall_scheme\17_04_lightx0p25
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
-Warning: underflow encountered in nextafter
+C:\Users\Psymo\Desktop\PyCHAM\PyCHAM\PyCHAM/output\mcm_APINENE_CH4_chem_scheme\O3_wall_loss_kw1p5e-3_Cw6e0
 Warning: underflow encountered in nextafter
 Warning: underflow encountered in nextafter
 Warning: underflow encountered in nextafter
