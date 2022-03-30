@@ -119,7 +119,7 @@ def plotter(caller, dir_path, comp_names_to_plot, self):
 				# gas-phase concentration (# molecules/cm3)
 				conc = yrec[:, indx_plot].reshape(yrec.shape[0], (indx_plot).shape[0])*Cfac
 			
-			if (len(indx_plot) > 1):
+			if (len(indx_plot) > 1): # e.g. for sum of RO2 or RO
 				conc = np.sum(conc, axis=1) # sum multiple components
 			
 			# plot this component
@@ -263,7 +263,7 @@ def plotter_noncsv(caller, dir_path, comp_names_to_plot, self):
 	PRESS = 1.e5 # chamber pressure (Pa)
 	ntot = PRESS*(si.N_A/((si.R*1.e6)*TEMP))
 	# one billionth of number of molecules in chamber unit volume
-	Cfac = (ntot*1.e-9) # ppb to molecules/cc conversion factor
+	Cfac = (ntot*1.e-9) # ppb to molecules/cm3 conversion factor
 	
 	if (comp_names_to_plot): # if component names specified
 	
@@ -281,3 +281,172 @@ def plotter_noncsv(caller, dir_path, comp_names_to_plot, self):
 	ax0.legend(fontsize = 14)
 	if (caller <= 2): # display
 		plt.show()	
+	
+	return()
+
+# plotting the radical pool
+def plotter_rad_pool(dir_path, self):
+
+	# ---------------------
+	# inputs:
+	# dir_path - path to folder containing results
+	# self - reference to PyCHAM
+	# ---------------------
+
+	# retrieve results
+	(num_sb, num_comp, Cfac, yrec, Ndry, rbou_rec, x, timehr, rel_SMILES, 
+		y_MW, _, comp_names, y_MV, _, wall_on, space_mode, 
+		_, _, _, PsatPa, OC, H2Oi, _, _, _, group_indx, _, _) = retr_out.retr_out(self.dir_path)
+	
+	if (self.rad_mark == 0): # if alkyl peroxy radicals
+		# get RO2 indices
+		indx_plot = np.array((group_indx['RO2i']))
+		
+	if (self.rad_mark == 1): # if alkoxy radicals
+		# get RO indices		
+		indx_plot = np.array((group_indx['ROi']))
+	
+	# get names of radicals in this pool
+	rad_names = (np.array((comp_names)))[indx_plot]
+
+	# isolate gas-phase concentrations of radical (ppb)
+	y_rad = yrec[:, indx_plot].reshape(yrec.shape[0], (indx_plot).shape[0])
+
+	# prepare for fractional contribution
+	y_radf = np.zeros((y_rad.shape[0], y_rad.shape[1]))
+
+	# sum of contributions per time step
+	rad_sum = ((np.sum(y_rad, axis= 1)).reshape(-1, 1))
+
+	# fractional contribution per time step
+	y_radf = np.zeros((y_rad.shape[0], y_rad.shape[1]))
+	y_radf[rad_sum[:,0]>0, :] = y_rad[rad_sum[:,0]>0, :]/rad_sum[rad_sum[:,0]>0, :]
+	
+	# sum of fractional contributions over time per component
+	y_radf_tot = np.sum(y_radf, axis = 0)
+
+	# order of radicals with greatest contributor first
+	ord = y_radf_tot.argsort()
+	
+	# use just the indices of the top number given by user
+	ord = ord[-self.rad_ord_num::]
+	
+	# plot fractional contribution ---------------------
+	plt.ion() # show results to screen and turn on interactive mode
+	# prepare plot
+	fig, (ax0) = plt.subplots(1, 1, figsize=(14, 7))
+	
+	for i in range(len(ord)): # loop through top contributors
+		ax0.plot(timehr, y_radf[:, ord[i]], label = rad_names[ord[i]])
+
+	# in case you want to check that sum of fractions=1
+	#ax0.plot(timehr, np.sum(y_radf, axis=1), label = 'sum of fractions (check)')
+
+	ax0.set_ylabel(str('Fraction of all ' + self.b361a.currentText()), fontsize = 14)
+	ax0.set_xlabel(r'Time through simulation (hours)', fontsize = 14)
+	ax0.yaxis.set_tick_params(labelsize = 14, direction = 'in')
+	ax0.xaxis.set_tick_params(labelsize = 14, direction = 'in')
+	ax0.legend(fontsize = 14)
+
+	return()
+
+# plotting the radical flux
+def plotter_rad_flux(self):
+
+	# ---------------------
+	# inputs:
+	# self - reference to PyCHAM
+	# ---------------------
+
+	# retrieve results
+	(num_sb, num_comp, Cfac, yrec, Ndry, rbou_rec, x, timehr, rel_SMILES, 
+		y_MW, _, comp_names, y_MV, _, wall_on, space_mode, 
+		_, _, _, PsatPa, OC, H2Oi, _, _, _, group_indx, _, _) = retr_out.retr_out(self.dir_path)
+	
+	# no record of change tendency for final experiment time point
+	timehr = timehr[0:-1]
+
+	if (self.rad_mark == 2): # if alkoxy radicals
+		# get RO indices		
+		indx_plot = np.array((group_indx['ROi']))
+	
+	# get names of radicals in this pool
+	rad_names = (np.array((comp_names)))[indx_plot]
+
+	# check that 
+	for comp_name in (rad_names):
+		
+		fname = str(self.dir_path+ '/' + comp_name + '_rate_of_change')
+		try: # try to open
+			dydt = np.loadtxt(fname, delimiter = ',', skiprows = 1) # skiprows = 1 omits header	
+		except:
+			mess = str('Please note, a change tendency record for the component ' + str(comp_name) + ' was not found, was it specified in the tracked_comp input of the model variables file?  Please see README for more information.')
+			self.l203a.setText(mess)
+			
+			# set border around error message
+			if (self.bd_pl == 1):
+				self.l203a.setStyleSheet(0., '2px dashed red', 0., 0.)
+				self.bd_pl = 2
+			else:
+				self.l203a.setStyleSheet(0., '2px solid red', 0., 0.)
+				self.bd_pl = 1
+			
+			plt.ioff() # turn off interactive mode
+			plt.close() # close figure window
+			
+			return()
+	
+	
+	# if all files are available, then proceed without error message
+	mess = str('')
+	self.l203a.setText(mess)
+			
+	if (self.bd_pl < 3):
+		self.l203a.setStyleSheet(0., '0px solid red', 0., 0.)
+		self.bd_pl == 3
+	
+	# prepare figure
+	plt.ion() # display figure in interactive mode
+	fig, (ax0) = plt.subplots(1, 1, figsize=(14, 7))
+	
+	
+	for comp_name in (rad_names): # loop through components to plot
+		
+		ci = comp_names.index(comp_name) # get index of this component
+		
+		# note that penultimate column in dydt is gas-particle 
+		# partitioning and final column is gas-wall partitioning, whilst
+		# the first row contains chemical reaction numbers
+		
+		# sum chemical reaction gains
+		crg = np.zeros((dydt.shape[0]-1, 1))
+		# sum chemical reaction losses
+		crl = np.zeros((dydt.shape[0]-1, 1))
+
+		for ti in range(dydt.shape[0]-1): # loop through times
+			indx = dydt[ti+1, 0:-2] > 0 # indices of reactions that produce component
+			crg[ti] = dydt[ti+1, 0:-2][indx].sum()
+			indx = dydt[ti+1, 0:-2] < 0 # indices of reactions that lose component
+			crl[ti] = dydt[ti+1, 0:-2][indx].sum()
+			 
+		# convert change tendencies from molecules/cc/s to ug/m3/s
+		#crg = ((crg/si.N_A)*y_mw[ci])*1.e12
+		#crl = ((crl/si.N_A)*y_mw[ci])*1.e12
+			 
+		# plot temporal profiles of change tendencies due to chemical 
+		# reaction production and loss
+		ax0.plot(timehr, crg, label = str('chemical reaction gain '+ comp_name))
+		ax0.plot(timehr, crl, label = str('chemical reaction loss '+ comp_name))
+		ax0.yaxis.set_tick_params(direction = 'in')
+		
+		ax0.set_title('Change tendencies, where a tendency to decrease \ngas-phase concentrations is negative')
+		ax0.set_xlabel('Time through experiment (hours)')
+		ax0.set_ylabel('Change tendency ($\mathrm{molecules \, cm^{-3}\, s^{-1}}$)')
+		
+		ax0.yaxis.set_tick_params(direction = 'in')
+		ax0.xaxis.set_tick_params(direction = 'in')
+		
+		ax0.legend()
+			 
+
+	return()
