@@ -285,7 +285,7 @@ def plotter_noncsv(caller, dir_path, comp_names_to_plot, self):
 	return()
 
 # plotting the radical pool
-def plotter_rad_pool(dir_path, self):
+def plotter_rad_pool(self):
 
 	# ---------------------
 	# inputs:
@@ -335,18 +335,29 @@ def plotter_rad_pool(dir_path, self):
 	plt.ion() # show results to screen and turn on interactive mode
 	# prepare plot
 	fig, (ax0) = plt.subplots(1, 1, figsize=(14, 7))
-	
-	for i in range(len(ord)): # loop through top contributors
-		ax0.plot(timehr, y_radf[:, ord[i]], label = rad_names[ord[i]])
+
+	par1 = ax0.twinx() # parasite (right) axis	
+
+
+	for i in range(len(ord)): # loop through top contributors, with biggest first
+		ax0.plot(timehr, y_radf[:, ord[-(i+1)]], label = str(rad_names[ord[-(i+1)]] + ' frac.'))
+		# plot right axis (absolute concentration)
+		p3, = par1.plot(timehr, y_rad[:, ord[-(i+1)]], '--', label = str(rad_names[ord[-(i+1)]] + ' conc.'))
 
 	# in case you want to check that sum of fractions=1
 	#ax0.plot(timehr, np.sum(y_radf, axis=1), label = 'sum of fractions (check)')
 
-	ax0.set_ylabel(str('Fraction of all ' + self.b361a.currentText()), fontsize = 14)
+	ax0.set_ylabel(str('Fraction of all concentrations'), fontsize = 14)
+	par1.set_ylabel('Concentration ($\mathrm{ppb}$)', fontsize = 14, rotation=270, labelpad=20) # right vertical axis label
 	ax0.set_xlabel(r'Time through simulation (hours)', fontsize = 14)
 	ax0.yaxis.set_tick_params(labelsize = 14, direction = 'in')
+	par1.yaxis.set_tick_params(labelsize = 14, direction = 'in')
 	ax0.xaxis.set_tick_params(labelsize = 14, direction = 'in')
-	ax0.legend(fontsize = 14)
+
+	par1.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1e')) # set tick format for vertical axis
+		
+	ax0.legend(fontsize = 14, loc= 'upper left')
+	par1.legend(fontsize = 14, loc= 'upper right')
 
 	return()
 
@@ -366,14 +377,18 @@ def plotter_rad_flux(self):
 	# no record of change tendency for final experiment time point
 	timehr = timehr[0:-1]
 
-	if (self.rad_mark == 2): # if alkoxy radicals
+	if (self.rad_mark == 2): # if alkyl peroxy radicals
+		# get RO2 indices		
+		indx_plot = np.array((group_indx['RO2i']))
+
+	if (self.rad_mark == 3): # if alkoxy radicals
 		# get RO indices		
 		indx_plot = np.array((group_indx['ROi']))
 	
 	# get names of radicals in this pool
 	rad_names = (np.array((comp_names)))[indx_plot]
 
-	# check that 
+	# check that all these components present
 	for comp_name in (rad_names):
 		
 		fname = str(self.dir_path+ '/' + comp_name + '_rate_of_change')
@@ -408,9 +423,18 @@ def plotter_rad_flux(self):
 	# prepare figure
 	plt.ion() # display figure in interactive mode
 	fig, (ax0) = plt.subplots(1, 1, figsize=(14, 7))
+	par1 = ax0.twinx() # parasite (right) axis	
+
+
+	# empty results for sum of absolute values for production and loss terms
+	cr_dydt = np.zeros((len(timehr), len(rad_names)))
 	
-	
-	for comp_name in (rad_names): # loop through components to plot
+	compi = 0 # count on components
+	for comp_name in (rad_names): # loop through possible components to plot
+		
+		# open results for this component
+		fname = str(self.dir_path+ '/' + comp_name + '_rate_of_change')
+		dydt = np.loadtxt(fname, delimiter = ',', skiprows = 1) # skiprows = 1 omits header	
 		
 		ci = comp_names.index(comp_name) # get index of this component
 		
@@ -425,28 +449,46 @@ def plotter_rad_flux(self):
 
 		for ti in range(dydt.shape[0]-1): # loop through times
 			indx = dydt[ti+1, 0:-2] > 0 # indices of reactions that produce component
-			crg[ti] = dydt[ti+1, 0:-2][indx].sum()
+			cr_dydt[ti, compi] = dydt[ti+1, 0:-2][indx].sum()
 			indx = dydt[ti+1, 0:-2] < 0 # indices of reactions that lose component
-			crl[ti] = dydt[ti+1, 0:-2][indx].sum()
-			 
-		# convert change tendencies from molecules/cc/s to ug/m3/s
-		#crg = ((crg/si.N_A)*y_mw[ci])*1.e12
-		#crl = ((crl/si.N_A)*y_mw[ci])*1.e12
-			 
-		# plot temporal profiles of change tendencies due to chemical 
-		# reaction production and loss
-		ax0.plot(timehr, crg, label = str('chemical reaction gain '+ comp_name))
-		ax0.plot(timehr, crl, label = str('chemical reaction loss '+ comp_name))
-		ax0.yaxis.set_tick_params(direction = 'in')
+			cr_dydt[ti, compi] += np.abs(dydt[ti+1, 0:-2][indx].sum())
 		
-		ax0.set_title('Change tendencies, where a tendency to decrease \ngas-phase concentrations is negative')
-		ax0.set_xlabel('Time through experiment (hours)')
-		ax0.set_ylabel('Change tendency ($\mathrm{molecules \, cm^{-3}\, s^{-1}}$)')
+		compi += 1 # count on components
+	
+	# sum fluxes over components
+	rad_sum = (np.sum(cr_dydt, axis = 1)).reshape(-1, 1)
+
+	# fraction of flux per time step
+	cr_dydt_frac = np.zeros((cr_dydt.shape[0], cr_dydt.shape[1]))
+	cr_dydt_frac[rad_sum[:, 0] > 0, :] = cr_dydt[rad_sum[:, 0] > 0, :]/rad_sum[rad_sum[:, 0] > 0, :]
+
+	# sum fluxes per component across all times
+	sum_cr_dydt = np.sum(cr_dydt, axis=0)
+	# get order
+	ord = sum_cr_dydt.argsort()
+	
+	# loop through top contributors
+	for compi in range(self.rad_ord_num):
 		
-		ax0.yaxis.set_tick_params(direction = 'in')
-		ax0.xaxis.set_tick_params(direction = 'in')
+		# plot temporal profiles of fractional change tendencies due to chemical 
+		# reaction
+		ax0.plot(timehr, cr_dydt_frac[:, ord[-(compi+1)]], label = str(rad_names[ord[-(compi+1)]] + ' frac.'))
+		# plot right axis (absolute flux)
+		p3, = par1.plot(timehr, cr_dydt[:, ord[-(compi+1)]], '--', label = str(rad_names[ord[-(compi+1)]] + ' flux'))
+
+
+	ax0.set_xlabel('Time through experiment (hours)', fontsize = 14)
+	ax0.set_ylabel('Fraction of all change tendencies', fontsize = 14)
+	par1.set_ylabel('Change tendency ($\mathrm{molecules \, cm^{-3}\, s^{-1}}$)', fontsize = 14, rotation=270, labelpad=20) # right vertical axis label
 		
-		ax0.legend()
+
+	ax0.yaxis.set_tick_params(labelsize = 14, direction = 'in')
+	par1.yaxis.set_tick_params(labelsize = 14, direction = 'in')
+
+	ax0.xaxis.set_tick_params(labelsize = 14, direction = 'in')
+		
+	ax0.legend(fontsize = 14, loc= 'upper left')
+	par1.legend(fontsize = 14, loc= 'upper right')
 			 
 
 	return()
