@@ -146,7 +146,6 @@ def saving(y_mat, Nresult_dry, Nresult_wet, t_out, savefolder, num_comp,
 	
 	
 	y_header = str('') # prepare header for concentrations with time file 
-	# prepare header for
 	x2_header = str('') # prepare header for files relating to size bins
 	
 	for i in range(numsb+1): # loop through size bins
@@ -170,7 +169,7 @@ def saving(y_mat, Nresult_dry, Nresult_wet, t_out, savefolder, num_comp,
 			y_header = str(y_header + str(start + comp_namelist[ii]) + end)
 			
 	# saving both gas, particle and wall concentrations of components
-	np.savetxt(os.path.join(output_by_sim, 'concentrations_all_components_all_times_gas_particle_wall'), y_mat, delimiter=',', header=str('time changes with rows which correspond to the time output file, components in columns, with _g representing gas phase (ppb), _pi representing particle phase where i is the size bin number (starting at 1) (molecules/cc (air)) and _w is the wall phase (molecules/cc (air))\n' + y_header)) 		
+	np.savetxt(os.path.join(output_by_sim, 'concentrations_all_components_all_times_gas_particle_wall'), y_mat, delimiter=',', header=str('time changes with rows which correspond to the time output file, components in columns, with _g representing gas phase (ppb), _pi representing particle phase where i is the size bin number (starting at 1) (molecules/cm3 (air)) and _w is the wall phase (molecules/cm3 (air))\n' + y_header)) 		
 	 
 	# saving time of outputs
 	np.savetxt(os.path.join(output_by_sim, 'time'), t_out, delimiter=',', header='time (s), these correspond to the rows in the concentrations_all_components_all_times_gas_particle_wall, particle_number_concentration and size_bin_radius output files')
@@ -198,6 +197,8 @@ def saving(y_mat, Nresult_dry, Nresult_wet, t_out, savefolder, num_comp,
 			np.savetxt(os.path.join(output_by_sim, comp_name), dydt_rec, delimiter=',', header='tendency to change, top row gives equation number (where number 0 is the first equation), penultimate column is gas-particle partitioning and final column is gas-wall partitioning (molecules/cc.s (air))')
 			compind += 1
 	
+	# saving generation of components
+	np.savetxt(os.path.join(output_by_sim, 'component_generation'), self.gen_num, delimiter=',', header='generation number of each component (where the initial unoxidised VOC is generation number 0), with the order corresponding to that of components in the concentrations_all_components_all_times_gas_particle_wall file.')
 	
 	if ((numsb-wall_on) > 0): # if particles present
 	

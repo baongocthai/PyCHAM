@@ -10,13 +10,14 @@ PyCHAM is an open-source computer code (written in Python) for simulating aeroso
 3. [Running](#Running)
 4. [Testing](#Testing)
 5. [Inputs](#Inputs)
-6. [Photochemistry](#Photochemistry)
-7. [Gas-particle Partitioning](#Gas-particle-Partitioning)
-8. [Numerical Considerations](#Numerical-Considerations)
-9. [Quick Plotting Tab](#Quick-Plotting-Tab)
-10. [Flow Mode](#Flow-Mode)
-11. [Frequently Asked Questions](#Frequently-Asked-Questions)
-12. [Acknowledgements](#Acknowledgements)
+6. [Outputs](#Outputs)
+7. [Photochemistry](#Photochemistry)
+8. [Gas-particle Partitioning](#Gas-particle-Partitioning)
+9. [Numerical Considerations](#Numerical-Considerations)
+10. [Quick Plotting Tab](#Quick-Plotting-Tab)
+11. [Flow Mode](#Flow-Mode)
+12. [Frequently Asked Questions](#Frequently-Asked-Questions)
+13. [Acknowledgements](#Acknowledgements)
 
 ## Documentation
 
@@ -250,6 +251,7 @@ In addition, you can find more information around photochemistry and flow mode i
 | z_prt_coeff = | Fraction of the total gas-particle partitioning coefficient below which partitioning of components (including water) to a size bin is treated as zero.  Defaults to one billionth (1.0e-9).  This setting is necessary for ODE solver stability when some particle size bins have relatively very small surface area.  To the best of our knowledge, the default value of one billionth has no significant effect on model results.  Please note that this is a variable required for numerical practicality and not for improved representation of simulated processes.  See the [Numerical Considerations](#Numerical-Considerations) section for further information. |
 | light_time = | Times (s) for light status, corresponding to the elements of light_status (below), defaults to 0.0s (start of experiment).  Use this setting regardless of whether light is natural or artificial (chamber lamps).  For example, for a 4 hour experiment, with lights on for first half and lights off for second, use: light_time = 0.0, 7200.0 light_status = 1, 0. light_time must include 0 (experiment start) and a corresponding light status in the light_status model variable. |
 | light_status = | 1 for lights on and 0 for lights off, with times given in light_time (above), if empty defaults to lights off for whole experiment.  Setting to off (0) means that even if variables defining light intensity above, the simulation will be dark.  Use this variable for both natural and artificial (chamber lamps) light.  The setting for a particular time is recognised when the time through experiment reached the time given in light_time.  For example, for a 4 hour experiment, with lights on for first half and lights off for second, use: light_time = 0.0, 7200.0 light_status = 1, 0.  If status not given for the experiment start (0.0 s), default is lights off at experiment start. |
+| trans_fac = | Transmission factor (0-1) for solar radiation (when this employed).  Use 1 for unhindered sunlight and lower values to represent resistances to sunlight transmission, such as clouds or windows. |
 | tf_UVC = | Fraction (0-1) of 254 nm light (where relevant) stated in the provided actinic flux file (specified in the act_flux_file model variable) allowed into chamber.  E.g. when a UV-C lamp has variable input. |
 | tf_UVCt = | Times (s) through experiment when values for the tf_UVC model variable are valid.  Defaults to 0.0 s (start of experiment), provide values in the same manner as described for the light_time model variable. |
 | tracked_comp = | Name of component(s) to track rate of concentration change (molecules/cm3/s); must match name given in chemical scheme (description of how to track multiple components with a group name given later in this section), and if multiple components given they must be separated by a comma.  Can be left empty and then defaults to tracking no components.  Use RO2_ind and RO_ind to track all individual alkyl peroxy radicals and alkoxy radicals, respectively. |
@@ -261,6 +263,74 @@ In addition, you can find more information around photochemistry and flow mode i
 | drh_ft = | Expression for deliquescence relative humidity (fraction between 0-1) as a function of temperature, where the usual python math symbols should be used for mathematical functions and TEMP should be used to represent temperature which has units K.  E.g. for a deliquescence relative humidity at 298.15 K of 0.5 and an increase/decrease of 0.001 for every unit decrease/increase in temperature: drh_ft = 0.5-(1.e-3*(TEMP-298.15)).  Defaults to a deliquescence relative humidity of 0.0 at all temperatures if left empty (which combined with the default H2O_hist model variable of 1 would result in the assumption of no crystallisation and therefore particle-phase always treated as a solution).  For general information on deliquescence and efflorescence, please see page 410 of [Seinfeld and Pandis 2016](https://www.wiley.com/en-us/Atmospheric+Chemistry+and+Physics%3A+From+Air+Pollution+to+Climate+Change%2C+3rd+Edition-p-9781118947401) and references therein.  Research into the gas-particle partitioning of water for various types of particles is ongoing, and a literature search is recommended for a particular PyCHAM simulation setup.  Please see the [Gas-particle Partitioning](#Gas-particle-Partitioning) section for information on how PyCHAM uses this model variable.|
 | erh_ft = | Expression for efflorescence relative humidity (fraction between 0-1) as a function of temperature, where the usual python math symbols should be used for mathematical functions and TEMP should be used to represent temperature which has units K.  E.g. for an efflorescence relative humidity at 298.15 K of 0.5 and an increase/decrease of 0.001 for every unit decrease/increase in temperature: erh_ft = 0.5-(1.e-3*(TEMP-298.15)).  Defaults to an efflorescence relative humidity of 0.0 at all temperatures if left empty (which combined with the default H2O_hist model variable of 1 would result in the assumption of no crystallisation and therefore particle-phase always treated as a solution).  For general information on deliquescence and efflorescence, please see page 410 of [Seinfeld and Pandis 2016](https://www.wiley.com/en-us/Atmospheric+Chemistry+and+Physics%3A+From+Air+Pollution+to+Climate+Change%2C+3rd+Edition-p-9781118947401) and references therein.  Research into the gas-particle partitioning of water for various types of particles is ongoing, and a literature search is recommended for a particular PyCHAM simulation setup.  Please see the [Gas-particle Partitioning](#Gas-particle-Partitioning) section for information on how PyCHAM uses this model variable.|
 | ser_H2O = | Integer value for whether to separate the integration of the water partitioning between vapour and particle problem from integration of other processes.  Set to 0 to turn off separation and set to 1 to turn on (1 is default).  See [Numerical Considerations](#Numerical-Considerations) for more information. |
+
+## Outputs
+
+Model results are saved to the folder specified by the user in the model variables file, using the model variable res_file_name (described above).  PyCHAM automatically places this folder inside the PyCHAM/output/name of chemical scheme/ folder.  Several files are stored in this output folder.  The concentrations of components is stored in the file with name beginning 'concentrations_all_components_all_times'.  This is a comma separated value (csv) file.  If you would like suggestions for code to open and view results, please see below, along with the plotter_gp.py file and the retr_out.py files.
+
+A minimum working example (for plotting the time profile of the gas-phase concentration of a given component) is (note that you may need to activate the PyCHAM environment in order to have the necessary packages available (numpy and matplotlib)):
+
+# state path to output folder (for Windows Operating System use \\ to separate folders rather than /))
+output_by_sim = 'path to your output folder'
+
+# combine folder path with specific file name for component names
+fname = str(output_by_sim + '/model_and_component_constants')
+
+# open file containing component name
+const_in = open(fname)
+# create empty dictionary to hold component names
+const = {}
+
+# loop through lines of file containing component names
+for line in const_in.readlines():
+		
+	dlist = [] # empty list to hold values
+	for i in line.split(',')[1::]:
+			
+		if (str(line.split(',')[0]) == 'chem_scheme_names') or (str(line.split(',')[0]) == 'SMILES') or (str(line.split(',')[0]) == 'space_mode'):
+			i = i.strip('\n')
+			i = i.strip('[')
+			i = i.strip(']')
+			i = i.strip(' ')
+			i = i.strip('\'')
+			dlist.append(str(i))
+			
+	const[str(line.split(',')[0])] = dlist
+
+# close file with component names
+const_in.close()
+
+# isolate component names from dictionary
+comp_names = const['chem_scheme_names']
+
+# withdraw times (s) -----------------
+fname = str(output_by_sim+'/time')
+# import numpy package
+import numpy as np
+# load times
+t_array = np.loadtxt(fname, delimiter=',', skiprows=1)
+timehr = t_array/3600.0 # convert from s to hr
+# ------------------------------------------
+
+# combine folder path with specific file name for component concentrations
+fname = str(output_by_sim + '/concentrations_all_components_all_times_gas_particle_wall')
+# load file, omitting headers
+y = np.loadtxt(fname, delimiter=',', skiprows=1)
+
+# state name of component you want to plot
+comp_names_to_plot = 'APINENE'
+
+# get index of this component
+indx_plot = [comp_names.index(comp_names_to_plot.strip())]
+
+# import packages for plotting
+import matplotlib.pyplot as plt
+
+# make plot
+plt.plot(timehr, y[:, indx_plot])
+
+# show plot
+plt.show()
 
 ## Photochemistry
 Chemical schemes may include photochemical reactions where the rate of reaction is dependent on light intensity.  Several of the model variables described here in the Model Variables .txt file section are relevant to correct modelling of photochemistry and these will be further detailed here.  
