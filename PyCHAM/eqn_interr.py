@@ -365,6 +365,9 @@ def eqn_interr(num_eqn, eqn_list, aqeqn_list, comp_name,
 		reac_min_gen = 0
 		ap_rad_f = 0 # flag for whether reactants include radicals
 		nzr = 0 # flag for non-zero generation number reactants
+		# prepare to store components that appear first as a reactant rather than product
+		early_comp = []
+
 		# loop through components in this equation
 		for SMILEi in SMILES_this_eq:
 			
@@ -374,12 +377,14 @@ def eqn_interr(num_eqn, eqn_list, aqeqn_list, comp_name,
 			name_only = name_only_this_eq[ci]
 			# number of carbons in this component
 			numC = SMILEi.count('c')+SMILEi.count('C')
-			if (numC <= 1): # if it is inorganic or methane-related
+			# number of oxygens in this component
+			numO = SMILEi.count('o')+SMILEi.count('O')
+
+			if (numC == 0): # if it has no carbon (inorganic)
 				# if generation number not yet included for this component
 				if (len(self.gen_num)-1 < comp_namelist.index(name_only)):
 					self.gen_num.append(0)
-				# note, don't allow the generation numbers of inorganics 
-				# to affect generation numbers of organics
+			
 			else:
 				# if it is an unoxidised organic, then say it's 0th-generation
 				if (SMILEi.count('o')+SMILEi.count('O') == 0):
@@ -390,22 +395,50 @@ def eqn_interr(num_eqn, eqn_list, aqeqn_list, comp_name,
 					# minimum generation number of reactant
 					reac_min_gen = min(0, reac_min_gen)
 					continue # continue onto next component in this equation
-				# otherwise, if it's a reactant, then it should already 
-				# have a generation number assigned
+
+				# if it is an oxidised organic
+				# then, if it's a reactant, it should already 
+				# have a generation number assigned because it should have
+				# already appeared as a product which are assigned generation 
+				# numbers below
 				if (ci < len(reactants)):
+
+					
+					
 					# index of this reactant
 					reac_index = comp_namelist.index(name_only)
+
+					# if first appearance of this componenet is as a reactant, 
+					# then store and wait for when it appears as a product
+					if (reac_index >= len(self.gen_num)):
+						self.gen_num.append(0)
+						early_comp.append(name_only)
+						continue
+
 					# check on whether this component is an alkyl peroxy radical
 					if ('[O]O' in SMILEi or 'O[O]' in SMILEi):
 						ap_rad_f = 1 # flag that an alkyl peroxy radical in reactants
-					# if it has a generation number greater than zero
-					if (self.gen_num[reac_index] > 0):
+					
+					# if this component appears in the chemical scheme first as a
+					# reactant (rather than product), and is a methane-related 
+					# oxidised molecule, then use it's generation number of one
+					if (reac_index >= len(self.gen_num) and numC == 1 and numO >= 1):
 						# if it's the first non-zero generation number reactant
-						if (nzr == 0):
-							reac_min_gen = self.gen_num[reac_index]
-							nzr = 1
-						# if it's the second non-zero generation number reactant, find the minimum
 						if (nzr > 0):
+							reac_min_gen = min(1, reac_min_gen)
+						if (nzr == 0):
+							reac_min_gen = 1
+							nzr = 1
+					
+					# if this component is already assigned a > 0 
+					# generation number,
+					# then identify minimum generation number in this equation
+					else:
+						if (self.gen_num[reac_index] > 0):
+							# if it's the first non-zero generation number reactant
+							if (nzr == 0):
+								reac_min_gen = self.gen_num[reac_index]
+								nzr = 1
 							reac_min_gen = min(self.gen_num[reac_index], reac_min_gen)
 					continue # continue onto next component in this equation
 				
@@ -423,11 +456,11 @@ def eqn_interr(num_eqn, eqn_list, aqeqn_list, comp_name,
 					
 					# check if this already has a generation number
 					if (comp_namelist.index(name_only) <= len(self.gen_num)-1):
-
+						
 						gn_pre = self.gen_num[comp_namelist.index(name_only)]
 						# if this number less than that suggested by reactants, then
 						# no change needed
-						if (gn_pre < prod_gen):
+						if (gn_pre < prod_gen and name_only not in early_comp):
 							continue # continue to next component in this equation
 						else: # otherwise 
 							self.gen_num[comp_namelist.index(name_only)] = prod_gen

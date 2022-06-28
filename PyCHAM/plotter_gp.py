@@ -289,14 +289,13 @@ def plotter_rad_pool(self):
 
 	# ---------------------
 	# inputs:
-	# dir_path - path to folder containing results
 	# self - reference to PyCHAM
 	# ---------------------
 
 	# retrieve results
 	(num_sb, num_comp, Cfac, yrec, Ndry, rbou_rec, x, timehr, rel_SMILES, 
 		y_MW, _, comp_names, y_MV, _, wall_on, space_mode, 
-		_, _, _, PsatPa, OC, H2Oi, _, _, _, group_indx, _, _) = retr_out.retr_out(self.dir_path)
+		_, _, _, PsatPa, OC, H2Oi, _, _, _, group_indx, _, ro_obj) = retr_out.retr_out(self.dir_path)
 	
 	if (self.rad_mark == 0): # if alkyl peroxy radicals
 		# get RO2 indices
@@ -305,12 +304,28 @@ def plotter_rad_pool(self):
 	if (self.rad_mark == 1): # if alkoxy radicals
 		# get RO indices		
 		indx_plot = np.array((group_indx['ROi']))
+
+	# get generation numbers of all components
+	gen_num = ro_obj.gen_numbers
+	
+ 	# need a section here to conditionally 
+	# ignore radicals with carbon number below the user-supplied
+	comp_cnt = 0
+	for SMILEi in rel_SMILES: # loop through SMILE strings
+		# if this component has less than the threshold carbon number
+		if (SMILEi.count('C')+SMILEi.count('c') < self.Cnum_thresh):
+			if comp_cnt in indx_plot:
+				indx_plot = np.delete(indx_plot, indx_plot == comp_cnt)
+		comp_cnt += 1		
 	
 	# get names of radicals in this pool
 	rad_names = (np.array((comp_names)))[indx_plot]
 
 	# isolate gas-phase concentrations of radical (ppb)
 	y_rad = yrec[:, indx_plot].reshape(yrec.shape[0], (indx_plot).shape[0])
+	
+	# isolate generations of radicals
+	gen_num = gen_num[indx_plot]
 
 	# prepare for fractional contribution
 	y_radf = np.zeros((y_rad.shape[0], y_rad.shape[1]))
@@ -338,11 +353,16 @@ def plotter_rad_pool(self):
 
 	par1 = ax0.twinx() # parasite (right) axis	
 
-
+	frac_sum = np.zeros((len(timehr))) # results array for total fractions shown here
+	
 	for i in range(len(ord)): # loop through top contributors, with biggest first
-		ax0.plot(timehr, y_radf[:, ord[-(i+1)]], label = str(rad_names[ord[-(i+1)]] + ' frac.'))
+		ax0.plot(timehr, y_radf[:, ord[-(i+1)]], label = str(rad_names[ord[-(i+1)]] + ' (gen' + str(int(gen_num[ord[-(i+1)]])) + ')' + ' frac.'))
+		frac_sum += y_radf[:, ord[-(i+1)]] # total fractions shown here
 		# plot right axis (absolute concentration)
 		p3, = par1.plot(timehr, y_rad[:, ord[-(i+1)]], '--', label = str(rad_names[ord[-(i+1)]] + ' conc.'))
+
+	# also plot sum of fractions shown in plot
+	ax0.plot(timehr, frac_sum, '-k', label = str(r'$\Sigma$(frac. shown here)'))
 
 	# in case you want to check that sum of fractions=1
 	#ax0.plot(timehr, np.sum(y_radf, axis=1), label = 'sum of fractions (check)')
@@ -539,6 +559,8 @@ def O3_iso(self):
 		NOxsum += yrec[:, NOxii]*Cfac
 	# range of NOx (# molecules/cm3)
 	NOx_range = [min(NOxsum), max(NOxsum)]
+	NOx_range = [1.0*Cfac[0], 1500.*Cfac[0]]
+	VOC_range = [1.0*Cfac[0], 200.*Cfac[0]]
 	
 	NOx_values = np.arange(NOx_range[0], NOx_range[1]*1.01, (NOx_range[1]-NOx_range[0])/3.)
 	VOC_values = np.arange(VOC_range[0], VOC_range[1]*1.01, (VOC_range[1]-VOC_range[0])/3.)
@@ -576,6 +598,10 @@ def O3_iso(self):
 			self.NOxequil = NOxvi
 			self.VOCequil = VOCvi
 
+			# ensure time step sufficiently long for spin-up
+			self.update_stp = 6.e1
+			self.save_step = 1.8e4
+			self.tot_time = 1.8e4
 			# now run program
 			from middle import middle # prepare to communicate with main program
 		
@@ -587,17 +613,30 @@ def O3_iso(self):
 					mess = prog
 					if (mess[0:4] == 'Stop'): # if it's an error message
 						return()
-
-			# O result (ppb)
+			# O3 result (ppb)
 			O3_res[Vc, Nc] = self.O3equil/Cfac[0]
-			print(Vc, Nc)
+			
 			Vc += 1 # VOC count
 		Nc += 1 # NOx count
-	print(O3_res)
+	
 	# prepare plot
 	plt.ion() # display figure in interactive mode
 	fig, (ax0) = plt.subplots(1, 1, figsize=(14, 7))
 	# ozone contour plot (# molecules/cm3)
-	#cs = plt.contourf(O3_res, levels=[0.0, 0.1, 0.2], colors=['yellow', 'green', 'purple'], extend='both', alpha=.90)
-	cs = plt.contourf(O3_res)
+	p1 = plt.contourf(NOx_values/Cfac[0], VOC_values/Cfac[0], O3_res)
+	# format axis labels
+	ax0.xaxis.set_tick_params(labelsize = 14, direction = 'in', which = 'both')
+	ax0.yaxis.set_tick_params(labelsize = 14, direction = 'in', which = 'both')
+
+	# set axis titles
+	ax0.set_xlabel(r'NOx mixing ratio (ppb)', fontsize=14)
+	ax0.set_ylabel(r'VOC mixing ratio (ppb)', fontsize=14)
+
+	# colour bar
+	cb = plt.colorbar(p1, pad=0.25, ax=ax0)
+	# colour bar label
+	cb.set_label('O3 mixing ratio (ppb)', size=14, rotation=270, labelpad=20)
+	# format color bar label
+	cb.ax.tick_params(labelsize=14)
+
 	return()

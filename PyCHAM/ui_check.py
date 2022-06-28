@@ -39,14 +39,13 @@ def ui_check(self):
 	# inputs: ----------------------------------------------------------------------
 	# self - reference to GUI
 	# --------------------------------------------------------------------------------
-
+	
 	# path to store for variables
 	input_by_sim = str(os.getcwd() + '/PyCHAM/pickle.pkl')
 	with open(input_by_sim, 'rb') as pk:
-		[sav_nam, update_stp, 
-		tot_time, comp0, y0, RH, RHt, Press,
+		[sav_nam, comp0, y0, RH, RHt, Press,
 		Cw, kw, siz_stru, num_sb, pmode, pconc, pconct, lowsize, uppsize, space_mode, std, mean_rad, 
-		save_step, Compt, injectt, Ct, seed_name,
+		Compt, injectt, Ct, seed_name,
 		seed_mw, seed_diss, seed_dens, seedx,
 		con_infl_t, dens_comp, dens, vol_comp, volP, act_comp, act_user, 
 		accom_comp, accom_val, uman_up, int_tol, new_partr, nucv1, 
@@ -74,8 +73,8 @@ def ui_check(self):
 	# self.chem_sch_mark - markers in chemical scheme
 	# self.af_path - actinic flux path
 	# int_tol - integration tolerances
-	# update_stp - time step for updating ODE initial conditions (s)
-	# tot_time - total experiment time (s)
+	# self.update_stp - time step for updating ODE initial conditions (s)
+	# self.tot_time - total experiment time (s)
 	# RH - relative humidity (0-1)
 	# uman_up - marker for whether to update UManSysProp folder
 	# self.light_stat - marker for whether lights on or off
@@ -372,7 +371,7 @@ def ui_check(self):
 			f = open(self.af_path, 'r') # open file
 			f.close() # close excel file
 		except:
-			err_mess = str('Error- actinic flux file ' + self.af_path + ' could not be found, please check file and/or the act_flux_file model variable in the model variable file.')
+			err_mess = str('Error: actinic flux file ' + self.af_path + ' could not be found, please check file and/or the act_flux_file model variable in the model variable file.')
 			em_flag = 2
 	
 	
@@ -472,12 +471,10 @@ def ui_check(self):
 			em_flag = 2
 	# ------------------------------------
 	
-
 	# store in pickle file
-	list_vars = [sav_nam, update_stp, 
-			tot_time, comp0, y0, RH, RHt, Press, 
+	list_vars = [sav_nam, comp0, y0, RH, RHt, Press, 
 			Cw, kw, siz_stru, num_sb, pmode, pconc, pconct, lowsize, 
-			uppsize, space_mode, std, mean_rad, save_step, 
+			uppsize, space_mode, std, mean_rad, 
 			Compt, injectt, Ct, seed_name, seed_mw, seed_diss, seed_dens, 
 			seedx, con_infl_t, dens_comp, dens, vol_comp, 
 			volP, act_comp, act_user, accom_comp, accom_val, uman_up, 	

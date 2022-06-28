@@ -50,10 +50,11 @@ def saving(y_mat, Nresult_dry, Nresult_wet, t_out, savefolder, num_comp,
 	#						Size_distributions.py for more than 1 size bin, or in 
 	# 						pp_intro.py for 1 size bin
 	# Cfactor_vst - one billionth the molecular concentration in a unit volume of chamber
-	#				(molecules/cc) per recording time step
+	#				(# molecules/cm3) per recording time step
 	# time_taken - computer time for entire simulation (s)
 	# seed_name - name of seed component
 	# y_mw - molecular weights (g/mol)
+	# self.nom_mass - nominal molar mass (g/mol)
 	# MV - molar volumes of all components (cm3/mol)
 	# time_taken - simulation computer time (s)
 	# seed_name - chemical scheme name of component comprising seed particles
@@ -75,6 +76,7 @@ def saving(y_mat, Nresult_dry, Nresult_wet, t_out, savefolder, num_comp,
 	# rel_SMILES - SMILES strings for components in chemical scheme
 	# Psat_Pa_rec - pure component saturation vapour pressures at 298.15 K
 	# OC - oxygen to carbon ratio of components
+	# self.HC - hydrogen to carbon ratio of components
 	# H2Oi - index of water
 	# self.seedi - index of seed components
 	# siz_str - the size structure
@@ -118,6 +120,7 @@ def saving(y_mat, Nresult_dry, Nresult_wet, t_out, savefolder, num_comp,
 	const["number_of_size_bins"] = numsb
 	const["number_of_components"] = num_comp
 	const["molecular_weights_g/mol_corresponding_to_component_names"] = (np.squeeze(y_mw[:, 0]).tolist())
+	const["nominal_molar_mass_g/mol"] = self.nom_mass.tolist()
 	const["molar_volumes_cm3/mol"] = (MV[:, 0].tolist())
 	const["organic_peroxy_radical_index"] = (self.RO2_indices[:, 1].tolist())
 	const["organic_alkoxy_radical_index"] = self.RO_indx
@@ -130,6 +133,7 @@ def saving(y_mat, Nresult_dry, Nresult_wet, t_out, savefolder, num_comp,
 	const["space_mode"] = space_mode
 	const["pure_component_saturation_vapour_pressures_at_298.15K"] = Psat_Pa_rec.tolist()
 	const["oxygen_to_carbon_ratios_of_components"] = OC.tolist()
+	const["hydrogen_to_carbon_ratios_of_components"] = self.HC.tolist()
 	const["index_of_water"] = H2Oi
 	const["index_of_seed_components"] = self.seedi.tolist()
 	const["size_structure_0_for_moving_centre_1_for_full_moving"] = siz_str
@@ -230,7 +234,7 @@ def saving(y_mat, Nresult_dry, Nresult_wet, t_out, savefolder, num_comp,
 		# don't need to save QGridLayout objects
 		if attr == 'title' or attr == 'left' or attr == 'top' or attr == 'width' or attr == 'height' or attr == 'initUI' or attr == 'setWindowTitle' or attr == 'setGeometry' or attr == 'setLayout':
 			continue
-		if '_orig' in attr or 'sch_name' in attr or 'xml_name' in attr or 'photo_path' in attr or 'chem_sch_mrk' in attr or 'TEMP' in attr or 'tempt' in attr or 'wall_on' in attr:
+		if '_orig' in attr or 'sch_name' in attr or 'xml_name' in attr or 'photo_path' in attr or 'chem_sch_mrk' in attr or 'TEMP' in attr or 'tempt' in attr or 'wall_on' in attr or 'update_stp' in attr or 'tot_time' in attr or 'save_step' in attr:
 			# transfer to dictionary
 			model_var_dict.update({attr:value})
 	with open(os.path.join(output_by_sim, 'simulation_self.pickle'), "wb") as f:

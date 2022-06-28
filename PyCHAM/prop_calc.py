@@ -38,7 +38,7 @@ from water_calc import water_calc
 def prop_calc(rel_SMILES, Pybel_objects, TEMP, H2Oi, num_comp, Psat_water, vol_Comp, 
 			volP, testf, corei, pconc, umansysprop_update, core_dens, spec_namelist,
 			ode_gen_flag, nuci, nuc_comp, num_asb, dens_comp, dens, seed_name,
-			y_mw):
+			y_mw, self):
 
 	# inputs: ------------------------------------------------------------
 	# rel_SMILES - array of SMILE strings for components 
@@ -63,6 +63,7 @@ def prop_calc(rel_SMILES, Pybel_objects, TEMP, H2Oi, num_comp, Psat_water, vol_C
 	# dens - manually assigned densities (g/cm3)
 	# seed_name - chemical scheme name(s) of component(s) comprising seed particles
 	# y_mw - molar mass of components (g/mol)
+	# self - reference to PyCHAM
 	# ------------------------------------------------------------
 	
 	
@@ -105,7 +106,11 @@ def prop_calc(rel_SMILES, Pybel_objects, TEMP, H2Oi, num_comp, Psat_water, vol_C
 	# core has zero vapour pressure
 	Psat = np.zeros((1, num_comp))
 	# oxygen:carbon ratio of components
-	OC= np.zeros((1, num_comp))
+	OC = np.zeros((1, num_comp))
+	# hydrogen:carbon ratio of components
+	self.HC = np.zeros((1, num_comp))
+	# nominal molar mass of components
+	self.nom_mass = np.zeros((1, num_comp))
 
 	
 	if (ode_gen_flag == 0): # estimate densities if called from middle
@@ -152,6 +157,8 @@ def prop_calc(rel_SMILES, Pybel_objects, TEMP, H2Oi, num_comp, Psat_water, vol_C
 			# core component not included in Pybel_objects
 			# assign an assumed O:C ratio of 0.
 			OC[0, i] = 0.
+			self.HC[0, i] = 0.
+			self.nom_mass[0, i] = 132.
 			# continuing
 			# here means its vapour pressure is 0 Pa, which is fine; if a 
 			# different vapour pressure is specified it is accounted for below
@@ -166,6 +173,8 @@ def prop_calc(rel_SMILES, Pybel_objects, TEMP, H2Oi, num_comp, Psat_water, vol_C
 			else:
 				[_, Psat_Pa_rec[i], _] = water_calc(298.15, 0.5, si.N_A)
 			OC[0, i] = 0.
+			self.HC[0, i] = 0.
+			self.nom_mass[0, i] = 2.*1.+1.*16.
 			continue
 		
 		if (spec_namelist[i] == 'O3'):
@@ -176,22 +185,31 @@ def prop_calc(rel_SMILES, Pybel_objects, TEMP, H2Oi, num_comp, Psat_water, vol_C
 			else:
 				Psat_Pa_rec[i] =  np.log10((8.25313-(814.941587/298.15)-0.001966943*298.15)*1.31579e-3)
 			OC[0, i] = 0.
+			self.HC[0, i] = 0.
+			self.nom_mass[0, i] = 0.*1.+3.*16.
 			continue
 
 		# possibly use different method for vapour pressure (log10(atm)) of HOMs
-		if 'api_' in spec_namelist[i] or 'API_' in spec_namelist[i]:	
-			Psat[0, i] = ((vapour_pressures.myrdal_and_yalkowsky(Pybel_objects[i], TEMP, boiling_points.nannoolal(Pybel_objects[i]))))
+		#if 'api_' in spec_namelist[i] or 'API_' in spec_namelist[i]:
+			#Psat[0, i] = -0.12*rel_SMILES[i].count('O') + rel_SMILES[i].count('C')*-0.22-2.5
 			
-			if (TEMP == 298.15):
-				Psat_Pa_rec[i] = Psat_Pa[0, i]
-			else: 
-				Psat_Pa_rec[i] = ((vapour_pressures.myrdal_and_yalkowsky(Pybel_objects[i], 298.15, boiling_points.nannoolal(Pybel_objects[i]))))
+			#	Psat[0, i] = ((vapour_pressures.myrdal_and_yalkowsky(Pybel_objects[i], TEMP, boiling_points.nannoolal(Pybel_objects[i]))))
+			
+			#if (TEMP == 298.15):
+				#Psat_Pa_rec[i] = Psat_Pa[0, i]
+			#else:
+				#Psat_Pa_rec[i] = -0.1*rel_SMILES[i].count('O') + rel_SMILES[i].count('C')*-0.2+0.5
+				#Psat_Pa_rec[i] = ((vapour_pressures.myrdal_and_yalkowsky(Pybel_objects[i], 298.15, boiling_points.nannoolal(Pybel_objects[i]))))
 		
 		else: # for non-HOM components
 			# vapour pressure (log10(atm)) (eq. 6 of Nannoolal et al. (2008), with dB of 
 			# that equation given by eq. 7 of same reference)
 			Psatnow = ((vapour_pressures.nannoolal(Pybel_objects[i], TEMP, 
 						boiling_points.nannoolal(Pybel_objects[i]))))
+
+			# in case you want to ensure small molecules don't contribute to particle mass
+			#if rel_SMILES[i].count('C')<=5:
+			#	 Psatnow += 10 # ensure no condensation of small molecules
 			
 			try: # in case array
 				Psat[0, i] = Psatnow[0]
@@ -212,12 +230,48 @@ def prop_calc(rel_SMILES, Pybel_objects, TEMP, H2Oi, num_comp, Psat_water, vol_C
 				except: # in case float
 					Psat_Pa_rec[i] = Psatnow
 
-		# O:C ratio determined from SMILES string
-		if (rel_SMILES[i].count( 'C') > 0):
-			OC[0, i] = (rel_SMILES[i].count( 'O'))/(rel_SMILES[i].count( 'C'))
-		else:
-			OC[0, i] = 0.
+		# if component is chlorine, then H:C is 0 and can continue
+		if (rel_SMILES[i] == 'ClCl'):
+			self.HC[0, i] = 0.
+			self.nom_mass[0, i] = 70.
+			continue
+
+		# if hydrogen is present in this molecule
+		if ('H' in Pybel_objects[i].formula):
+
+			
+
+			Hindx_start = Pybel_objects[i].formula.index('H')+1
+			Hindx_end = Hindx_start
+			for Hnum_test in Pybel_objects[i].formula[Hindx_start::]:
+				try:
+					float(Hnum_test) # only continue if this character is a number
+					Hindx_end += 1
+					if (Hindx_end == len(Pybel_objects[i].formula)):
+						Hcount = float(Pybel_objects[i].formula[Hindx_start:Hindx_end])
+				except:
+					if (Hindx_end != Hindx_start):
+						Hcount = float(Pybel_objects[i].formula[Hindx_start:Hindx_end])
+					else:
+						Hcount = 1. # if no number then Hydrogen must be alone
+					break
+
+		else: # if no hydrocarbons
+			Hcount = 0.
+			self.HC[0, i] = 0.
+
+		self.nom_mass[0, i] = Hcount*1.+rel_SMILES[i].count('O')*16.+rel_SMILES[i].count('C')*12.+rel_SMILES[i].count('N')*14.+rel_SMILES[i].count('S')*32.
 		
+		#if (rel_SMILES[i] == '[N+](=O)(O)[O-]'):
+		#	print(Hcount, self.nom_mass[0, i])
+		#	import ipdb; ipdb.set_trace()
+
+		# O:C ratio determined from SMILES string
+		if (rel_SMILES[i].count('C') > 0):
+			OC[0, i] = (rel_SMILES[i].count('O'))/(rel_SMILES[i].count('C'))
+			self.HC[0, i] = Hcount/(rel_SMILES[i].count('C'))
+		else: # if no carbons in this component
+			OC[0, i] = 0.
 	
 	ish = (Psat == 0.)
 	
@@ -252,4 +306,4 @@ def prop_calc(rel_SMILES, Pybel_objects, TEMP, H2Oi, num_comp, Psat_water, vol_C
 	if (num_asb > 0):
 		Psat = np.repeat(Psat, num_asb, axis=0)
 	
-	return(Psat, y_dens, Psat_Pa, Psat_Pa_rec, OC)
+	return(Psat, y_dens, Psat_Pa, Psat_Pa_rec, OC, self)

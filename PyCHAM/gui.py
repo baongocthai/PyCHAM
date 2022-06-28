@@ -139,9 +139,9 @@ class PyCHAM(QWidget):
 		self.NSlayout.addWidget(b0, 0, ffscn, 1, 2)
 		
 		# default variables for all required input model variables -------------------------
-		[sav_nam, update_stp, tot_time, comp0, 
+		[sav_nam, comp0, 
 		y0, RH, RHt, Press, Cw, kw, siz_stru, num_sb, pmode, pconc, 
-		pconct, lowsize, uppsize, space_mode, std, mean_rad, save_step, Compt, 
+		pconct, lowsize, uppsize, space_mode, std, mean_rad, Compt, 
 		injectt, Ct, seed_name, seed_mw, seed_diss, seed_dens, seedx,
 		con_infl_t, dens_comp, dens, vol_comp, volP, act_comp, 
 		act_user, accom_comp, accom_val, uman_up, int_tol, new_partr, nucv1, nucv2, nucv3, 
@@ -245,21 +245,21 @@ class PyCHAM(QWidget):
 		l11.setText('Total experiment time (s): ')
 		self.varbox.addWidget(l11, gen_row+3, 0)
 		self.l11a = QLabel(self)
-		self.l11a.setText((str(tot_time)).replace('\'', '').replace(' ', ''))
+		self.l11a.setText((str(self.tot_time)).replace('\'', '').replace(' ', ''))
 		self.varbox.addWidget(self.l11a, gen_row+3, 1)
 		
 		l12 = QLabel(self)
 		l12.setText('Update time interval (s): ')
 		self.varbox.addWidget(l12, gen_row+4, 0)
 		self.l12a = QLabel(self)
-		self.l12a.setText((str(update_stp)).replace('\'', '').replace(' ', ''))
+		self.l12a.setText((str(self.update_stp)).replace('\'', '').replace(' ', ''))
 		self.varbox.addWidget(self.l12a, gen_row+4, 1)
 		
 		l13 = QLabel(self)
 		l13.setText('Recording time interval (s): ')
 		self.varbox.addWidget(l13, gen_row+5, 0)
 		self.l13a = QLabel(self)
-		self.l13a.setText((str(save_step)).replace('\'', '').replace(' ', ''))
+		self.l13a.setText((str(self.save_step)).replace('\'', '').replace(' ', ''))
 		self.varbox.addWidget(self.l13a, gen_row+5, 1)
 		
 		l13_1 = QLabel(self)
@@ -1344,14 +1344,14 @@ class PyCHAM(QWidget):
 		self.PARlayout.addWidget(self.e224b, 6, 0, 1, 2)
 
 		# button to estimate consumption
-		self.b224 = QPushButton(str('Consumption (' + u'\u03BC' + 'g/m' + u'\u00B3' +')'))
+		self.b224 = QPushButton(str('Consumption by chemical reaction (' + u'\u03BC' + 'g/m' + u'\u00B3' +')'))
 		self.b224.setToolTip('For the component specified above show the mass concentration consumed throughout the whole simulation in the message box above')
 		self.b224.clicked.connect(self.on_click224)
 		#self.b224.setStyleSheet('background-color : white; border-width : 1px; border-radius : 7px; border-color: silver; padding: 2px; border-style : solid')
 		self.PARlayout.addWidget(self.b224, 7, 0, 1, 1)
 
 		# button to estimate SOA yield
-		self.b225 = QPushButton(str('SOA yield (fraction 0-1)'))
+		self.b225 = QPushButton(str('SOA yield by chemical reaction (fraction 0-1)'))
 		self.b225.setToolTip('In the message box above show the SOA yield from the component given in the box above between the times stated in the boxes above.')
 		self.b225.clicked.connect(self.on_click225)
 		#self.b225.setStyleSheet('background-color : white; border-width : 1px; border-radius : 7px; border-color: silver; padding: 2px; border-style : solid')
@@ -1378,14 +1378,20 @@ class PyCHAM(QWidget):
 		self.b361a.addItem('RO (alkoxy radical) Concentration (ppb)')
 		self.b361a.addItem('RO2 (alkyl peroxy radical) Flux (molecules/cm3/s)')
 		self.b361a.addItem('RO (alkoxy radical) Flux (molecules/cm3/s)')
-		self.RADlayout.addWidget(self.b361a, 1, 0, 1, 1)
+		self.RADlayout.addWidget(self.b361a, 1, 0, 1, 2)
+		
+		# input bar for carbon number threshold
+		self.e361 = QLineEdit(self)
+		self.e361.setText('Provide the minimum carbon number of a radical to be considered (defaults to 1)')
+		self.e361.setStyleSheet('qproperty-cursorPosition : 0')
+		self.RADlayout.addWidget(self.e361, 2, 0, 1, 1)
 	
 		# button to plot radical output
 		self.b362 = QPushButton(str('Plot'))
 		self.b362.setToolTip('Show the selected output by the top number of components (number given in box above)')
 		self.b362.clicked.connect(self.on_click362)
 		#self.b362.setStyleSheet('background-color : white; border-width : 1px; border-radius : 7px; border-color: silver; padding: 2px; border-style : solid')
-		self.RADlayout.addWidget(self.b362, 1, 1)
+		self.RADlayout.addWidget(self.b362, 2, 1)
 
 		return(RADTab)
 
@@ -1715,9 +1721,27 @@ class PyCHAM(QWidget):
 		# plot observations and model results
 		# select observations file --------------------------------------------------------------
 		b401 = QPushButton('Observed && Modelled', self)
-		b401.setToolTip('Plot Observations and Model Results as Described in Quick tab')
+		b401.setToolTip('Plot Observations and Model Results')
 		b401.clicked.connect(self.on_click401)
-		self.OBSlayout.addWidget(b401, 1, 0, 1, 1)
+		self.OBSlayout.addWidget(b401, 1, 1, 1, 1)
+
+		# drop down button for what to plot
+		self.b402 = QComboBox(self)
+		self.b402.addItem('Gas-phase Concentrations (ppb)')
+		self.b402.addItem('Van Krevelen (Time Profile, Averaged Over All Hydrocarbons)')
+		self.b402.addItem('Van Krevelen (Time Profile, Averaged Over Non-methane Hydrocarbons)')
+		self.b402.addItem('Van Krevelen (Time Profile, Averaged Over _ Extension Hydrocarbons)')
+		self.b402.addItem('Van Krevelen (All Individual Hydrocarbons at The Time Through Experiment (s) Provided Below)')
+		self.b402.addItem('Van Krevelen (Non-methane Individual Hydrocarbons at The Time Through Experiment (s) Provided Below)')
+		self.b402.addItem('Van Krevelen (_ Extension Individual Hydrocarbons at The Time Through Experiment (s) Provided Below)')
+		self.b402.addItem('Mass Defect of All Components in Chemical Scheme')
+		self.b402.addItem('Mass Defect of All Hydrocarbons Scaled to Concentrations at Time Through Experiment (s) Provided Below')
+		self.OBSlayout.addWidget(self.b402, 1, 0, 1, 1)
+
+		# input for observed and modelled plotting options
+		self.e403 = QTextEdit(self)
+		self.e403.setText('Provide Plotting Options as Described in the Selected Drop-down Button Option Above')
+		self.OBSlayout.addWidget(self.e403, 2, 0, 1, 1)
 		
 		return(OBSTab)
 
@@ -1758,9 +1782,9 @@ class PyCHAM(QWidget):
 		
 		# prepare by enforcing default variables
 		# default variables for all required input model variables -------------------------
-		[sav_nam, update_stp, tot_time, comp0, 
+		[sav_nam, comp0, 
 		y0, RH, RHt, Press, Cw, kw, siz_stru, num_sb, pmode, pconc, 
-		pconct, lowsize, uppsize, space_mode, std, mean_rad, save_step, Compt, 
+		pconct, lowsize, uppsize, space_mode, std, mean_rad, Compt, 
 		injectt, Ct, seed_name, seed_mw, seed_diss, seed_dens, seedx, 
 		con_infl_t, dens_comp, dens, vol_comp, volP, act_comp, 
 		act_user, accom_comp, accom_val, uman_up, int_tol, new_partr, nucv1, nucv2, nucv3, 
@@ -1772,10 +1796,9 @@ class PyCHAM(QWidget):
 		input_by_sim = str(os.getcwd() + '/PyCHAM/pickle.pkl')
 		
 		with open(input_by_sim, 'rb') as pk:
-			[sav_nam, update_stp, 
-			tot_time, comp0, y0, RH, RHt, Press,
+			[sav_nam, comp0, y0, RH, RHt, Press,
 			Cw, kw, siz_stru, num_sb, pmode, pconc, pconct, lowsize, uppsize, space_mode, std, mean_rad, 
-			save_step, Compt, injectt, Ct, seed_name,
+			Compt, injectt, Ct, seed_name,
 			seed_mw, seed_diss, seed_dens, seedx,
 			con_infl_t, dens_comp, dens, vol_comp, volP, act_comp, act_user, 
 			accom_comp, accom_val, uman_up, int_tol, new_partr, nucv1, 
@@ -1830,7 +1853,7 @@ class PyCHAM(QWidget):
 		# check on inputs - note this loads the last saved pickle file and saves any change to this pickle file
 		ui_check.ui_check(self)
 		# finished check on model variables --------------------------------------------------------------		
-
+		
 		return()
 		
 	@pyqtSlot()
@@ -1923,10 +1946,9 @@ class PyCHAM(QWidget):
 		
 			# reset to default variables to allow any new variables to arise
 			# from the current model variables file only
-			[sav_nam, update_stp, 
-			tot_time, comp0, y0, RH, RHt, Press, Cw, 
+			[sav_nam, comp0, y0, RH, RHt, Press, Cw, 
 			kw, siz_stru, num_sb, pmode, pconc, pconct, lowsize, uppsize, 
-			space_mode, std, mean_rad, save_step, Compt, injectt, 
+			space_mode, std, mean_rad, Compt, injectt, 
 			Ct, seed_name, seed_mw, seed_diss, seed_dens, seedx, 
 			con_infl_t, dens_comp, dens, vol_comp, volP, act_comp, act_user, accom_comp, 
 			accom_val, uman_up, int_tol, new_partr, nucv1, nucv2, nucv3, 
@@ -1967,10 +1989,9 @@ class PyCHAM(QWidget):
 			# get the save path name variables
 			input_by_sim = str(os.getcwd() + '/PyCHAM/pickle.pkl')
 			with open(input_by_sim, 'rb') as pk:
-				[sav_nam, update_stp, 
-				tot_time, comp0, y0, RH, RHt, Press,
+				[sav_nam, comp0, y0, RH, RHt, Press,
 				Cw, kw, siz_stru, num_sb, pmode, pconc, pconct, lowsize, uppsize, space_mode, std, mean_rad, 
-				save_step, Compt, injectt, Ct, seed_name,
+				Compt, injectt, Ct, seed_name,
 				seed_mw, seed_diss, seed_dens, seedx,
 				con_infl_t, dens_comp, dens, vol_comp, volP, act_comp, act_user, 
 				accom_comp, accom_val, uman_up, int_tol, new_partr, nucv1, 
@@ -3585,10 +3606,9 @@ class PyCHAM(QWidget):
 
 			# get the most recent model variables
 			with open(input_by_sim, 'rb') as pk:
-				[sav_nam, update_stp, 
-				tot_time, comp0, y0, RH, RHt, Press,
+				[sav_nam, comp0, y0, RH, RHt, Press,
 				Cw, kw, siz_stru, num_sb, pmode, pconc, pconct, lowsize, uppsize, space_mode, 
-				std, mean_rad, save_step, Compt, injectt, Ct, seed_name,
+				std, mean_rad, Compt, injectt, Ct, seed_name,
 				seed_mw, seed_diss, seed_dens, seedx,
 				con_infl_t, dens_comp, dens, vol_comp, volP, act_comp, act_user, 
 				accom_comp, accom_val, uman_up, int_tol, new_partr, nucv1, 
@@ -3621,7 +3641,7 @@ class PyCHAM(QWidget):
 
 		# get component name
 		try:
-			comp_chem_schem_name = str((self.e224.text()))
+			self.comp_names_to_plot = [str((self.e224.text()))]
 
 		except: # give error message
 			self.l203a.setText('Error - could not read chemical scheme name of component to estimate consumption of from box above')
@@ -3646,7 +3666,7 @@ class PyCHAM(QWidget):
 			self.tmax = 1.
 
 		import consumption # function to estimate consumption
-		consumption.cons(comp_chem_schem_name, dir_path, self, 0)
+		consumption.cons(dir_path, self, 0)
 
 	@pyqtSlot() # button to retrieve and report yield
 	def on_click225(self):
@@ -3655,7 +3675,7 @@ class PyCHAM(QWidget):
 
 		# get component name
 		try:
-			comp_chem_schem_name = str((self.e224.text()))
+			self.comp_names_to_plot = [str((self.e224.text()))]
 
 		except: # give error message
 			self.l203a.setText('Error - could not read chemical scheme name of component to estimate yield of from box above')
@@ -3682,7 +3702,7 @@ class PyCHAM(QWidget):
 			self.tmax = 1.
 
 		import consumption # function to estimate consumption
-		consumption.cons(comp_chem_schem_name, dir_path, self, 1)
+		consumption.cons(dir_path, self, 1)
 		return()
 
 	@pyqtSlot()
@@ -3713,6 +3733,13 @@ class PyCHAM(QWidget):
 		# if RO flux
 		if ('RO (alkoxy radical) Flux' in input_check_text):
 			self.rad_mark = 3
+		
+		# get minimum carbon number of component to consider
+		if str((self.e361.text()))[0:3] == 'Pro':
+			# default to 1
+			self.Cnum_thresh = 1
+		else:
+			self.Cnum_thresh = float((self.e361.text()))
 		
 		self.dir_path = self.l201.text() # name of folder with results
 
@@ -3754,11 +3781,41 @@ class PyCHAM(QWidget):
 		self.xls_path = self.l401.text()
 		# get path to model results
 		self.mod_path = dir_path = self.l201.text()
-		# get names of gas-phase components to plot
-		self.gp_names = [str(i) for i in self.e205.text(). split(',')]
-		# gas-phase concentration units
-		self.gp_units = self.b206b.currentText()
+	
+		# get what to plot from drop-down button
+		om_choice = self.b402.currentText()
 		
+		# flag for what is being plotted
+		self.oandm = 0
+
+		# if gas-phase concentrations
+		if ('Gas-phase Concentrations' in om_choice):
+			self.oandm = 1
+			# get names of gas-phase components to plot
+			self.gp_names = [str(i) for i in self.e205.text(). split(',')]
+			# gas-phase concentration units
+			self.gp_units = self.b206b.currentText()
+
+		# if Van Krevelen
+		if ('Van Krevelen (Time Profile, Averaged Over All Hydrocarbons)' in om_choice):
+			self.oandm = 2
+		if ('Van Krevelen (All Individual Hydrocarbons at The Time Through Experiment (s) Provided Below)' in om_choice):
+			self.oandm = 3
+		if ('Van Krevelen (Time Profile, Averaged Over Non-methane Hydrocarbons)' in om_choice):
+			self.oandm = 4
+		if ('Van Krevelen (Non-methane Individual Hydrocarbons at The Time Through Experiment (s) Provided Below)' in om_choice):
+			self.oandm = 5
+		if ('Van Krevelen (Time Profile, Averaged Over _ Extension Hydrocarbons)' in om_choice):
+			self.oandm = 6
+		if ('Van Krevelen (_ Extension Individual Hydrocarbons at The Time Through Experiment (s) Provided Below)' in om_choice):
+			self.oandm = 7
+
+		# if mass defect
+		if ('Mass Defect of All Components in Chemical Scheme' in om_choice):
+			self.oandm = 8
+		if ('Mass Defect of All Hydrocarbons Scaled to Concentrations at Time Through Experiment (s) Provided Below'):
+			self.oandm = 9
+
 		# check on inputs and provide message for user if anything missing
 		if (self.xls_path == ''):
 			self.l203a.setText('Error - no path to observations selected')
@@ -3770,6 +3827,7 @@ class PyCHAM(QWidget):
 				self.l203a.setStyleSheet(0., '2px solid red', 0., 0.)
 				self.bd_pl = 1
 			return()
+
 		if (self.mod_path == ''):
 			self.l203a.setText('Error - no path to model results selected')
 			# set border around error message
@@ -3780,17 +3838,26 @@ class PyCHAM(QWidget):
 				self.l203a.setStyleSheet(0., '2px solid red', 0., 0.)
 				self.bd_pl = 1
 			return()
-		
-		if (self.gp_names == ['']):
-			self.l203a.setText('Note, no components specified to be plotted for model results')
-			if (self.bd_pl == 1):
-				self.l203a.setStyleSheet(0., '2px dashed magenta', 0., 0.)
-				self.bd_pl = 2
-			else:
-				self.l203a.setStyleSheet(0., '2px solid magenta', 0., 0.)
-				self.bd_pl = 1
+
+		if (self.oandm == 1): # if on gas-phase temporal profiles
+			if (self.gp_names == ['']):
+				self.l203a.setText('Note, no components specified to be plotted for model results')
+				if (self.bd_pl == 1):
+					self.l203a.setStyleSheet(0., '2px dashed magenta', 0., 0.)
+					self.bd_pl = 2
+				else:
+					self.l203a.setStyleSheet(0., '2px solid magenta', 0., 0.)
+					self.bd_pl = 1
 		import plotter_xls
-		plotter_xls.plotter_gp_mod_n_obs(self)		
+
+		if (self.oandm == 1): # if the gas-phase temporal profiles to be plotted
+			plotter_xls.plotter_gp_mod_n_obs(self)
+		if (self.oandm >= 2 and self.oandm <= 7): # if the Van Krevelen to be plotted
+			plotter_xls.plotter_VK_mod_n_obs(self)
+		if (self.oandm >=8): # if mass defect plot
+			plotter_xls.plotter_mass_defect(self)
+
+	
 		return()
 
 # class for scrollable label 

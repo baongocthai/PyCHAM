@@ -47,7 +47,7 @@ def retr_out(output_by_sim):
 				dlist.append(str(i))
 			if str(line.split(',')[0]) == 'number_of_components' or str(line.split(',')[0]) == 'wall_on_flag_0forNO_1forYES':
 				dlist.append(int(i))
-			if str(line.split(',')[0]) == 'molecular_weights_g/mol_corresponding_to_component_names' or  str(line.split(',')[0]) == 'molecular_volumes_cm3/mol' or  str(line.split(',')[0]) == 'molar_volumes_cm3/mol':
+			if str(line.split(',')[0]) == 'molecular_weights_g/mol_corresponding_to_component_names' or  str(line.split(',')[0]) == 'molecular_volumes_cm3/mol' or  str(line.split(',')[0]) == 'molar_volumes_cm3/mol' or str(line.split(',')[0]) == 'nominal_molar_mass_g/mol':
 				i = i.strip('\n')
 				i = i.strip('[')
 				i = i.strip(']')
@@ -85,7 +85,7 @@ def retr_out(output_by_sim):
 					dlist.append(int(i))
 				except:
 					continue
-			if (str(line.split(',')[0]) == 'oxygen_to_carbon_ratios_of_components'):
+			if (str(line.split(',')[0]) == 'oxygen_to_carbon_ratios_of_components' or str(line.split(',')[0]) == 'hydrogen_to_carbon_ratios_of_components'):
 				i = i.strip('\n')
 				i = i.strip('[[')
 				i = i.strip(']]')
@@ -149,13 +149,18 @@ def retr_out(output_by_sim):
 	Cfactor = const['factor_for_multiplying_ppb_to_get_molec/cm3_with_time']
 	rel_SMILES = const['SMILES']
 	y_MW = const['molecular_weights_g/mol_corresponding_to_component_names']
+	# nominam molar masses (g/mol)
+	nom_mass = const['nominal_molar_mass_g/mol']
 	comp_names = const['chem_scheme_names']
 	wall_on = const['wall_on_flag_0forNO_1forYES'][0]
 	space_mode = const['space_mode'][0]
 	# pure component saturation vapour pressures at 298.15 K (log10(atm))
 	PsatPa = const['pure_component_saturation_vapour_pressures_at_298.15K']
-	# pure component saturation vapour pressures at 298.15 K (log10(atm))
+	# oxygen:carbon ratios of components
 	OC = const['oxygen_to_carbon_ratios_of_components']
+	# hydrogen:carbon ratios of components; this output added on 31/05/2022
+	HC = const['hydrogen_to_carbon_ratios_of_components']
+	
 	H2Oi = int((const['index_of_water'])[0]) # index of water
 	
 	seedi = const['index_of_seed_components'] # index of seed components
@@ -291,7 +296,9 @@ def retr_out(output_by_sim):
 		vp = output_by_sim_mv_ext # model variables path
 		gi = group_indx # indices of groups of components
 		gen_numbers = gen_num # for each component, the generation number
-
+		# this output added on 31/05/2022
+		HyC = HC # hydrogen:carbon ratios for each component
+		nominal_mass = nom_mass 
 	ro_obj = ro_outputs() # create object to hold outputs
 	
 	return(num_sb, num_comp, Cfactor, y, N, rbou_rec, x, timehr, rel_SMILES, y_MW, 

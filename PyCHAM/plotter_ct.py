@@ -130,7 +130,7 @@ def plotter(caller, dir_path, comp_names_to_plot, self):
 			indx = dydt[ti+1, 0:-2] < 0 # indices of reactions that lose component
 			crl[ti] = dydt[ti+1, 0:-2][indx].sum()
 			 
-		# convert change tendencies from molecules/cc/s to ug/m3/s
+		# convert change tendencies from molecules/cm3/s to ug/m3/s
 		gpp = ((gpp/si.N_A)*y_mw[ci])*1.e12
 		gwp = ((gwp/si.N_A)*y_mw[ci])*1.e12
 		crg = ((crg/si.N_A)*y_mw[ci])*1.e12
@@ -243,6 +243,8 @@ def plotter_ind(caller, dir_path, comp_names_to_plot, top_num, uc, self):
 		res = np.zeros((dydt.shape[0], dydt.shape[1]-2))
 		res[:, :] = dydt[:, 0:-2] # get chemical reaction numbers and change tendencies
 		
+		import scipy.constants as si
+
 		if (uc == 0):
 			Cfaca = (np.array(Cfac)).reshape(-1, 1) # convert to numpy array from list
 			# convert change tendencies from # molecules/cm3/s to ppb
@@ -298,11 +300,11 @@ def plotter_ind(caller, dir_path, comp_names_to_plot, top_num, uc, self):
 			# ----------------------------------------------------
 
 			if key == 'chem_scheme_markers' and (value.strip()): # formatting for chemical scheme
-				chem_sch_mrk = [str(i).strip() for i in (value.split(','))]
+				self.chem_sch_mrk = [str(i).strip() for i in (value.split(','))]
 
 		# interrogate scheme to list equations
 		[eqn_list, aqeqn_list, eqn_num, rrc, rrc_name, 
-			RO2_names] = sch_interr.sch_interr(total_list_eqn, chem_sch_mrk)	
+			RO2_names] = sch_interr.sch_interr(total_list_eqn, self)	
 	
 		for cnum in range(np.min([top_num[0], len(res_sort)])): # loop through chemical reactions
 			
